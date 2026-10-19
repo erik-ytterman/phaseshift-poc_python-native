@@ -25,6 +25,12 @@ test: dev
     cargo test
     uv run pytest
 
+# Remove all build artifacts and the venv
+clean:
+    rm -rf .venv target dist .mypy_cache .ruff_cache .pytest_cache
+    rm -f src/my_project/*.so src/my_project/*.pyd profile.svg
+    find . -name __pycache__ -type d -prune -exec rm -rf {} +
+
 # Run every check (good for CI / pre-push)
 check: lint typecheck test
 
