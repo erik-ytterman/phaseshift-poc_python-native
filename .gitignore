@@ -1,0 +1,21 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+# Rust build output
+/target
+
+# Compiled extension placed in the package by `maturin develop`
+src/my_project/*.so
+src/my_project/*.pyd
+
+# py-spy output
+profile.svg
+

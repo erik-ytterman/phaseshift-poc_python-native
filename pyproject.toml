@@ -1,0 +1,48 @@
+[project]
+name = "python-native"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "Erik", email = "erik.ytterman@phaseshift.se" }
+]
+requires-python = ">=3.13"
+dependencies = [
+    "pytest>=9.1.1",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM", "RUF"]
+
+[tool.mypy]
+strict = true
+files = ["src/python_native", "tests"]
+mypy_path = "src"
+explicit_package_bases = true
+
+[tool.maturin]
+module-name = "python_native._core"
+python-packages = ["python_native"]
+python-source = "src"
+features = ["pyo3/extension-module"]
+
+[tool.uv]
+cache-keys = [{ file = "pyproject.toml" }, { file = "src/**/*.rs" }, { file = "Cargo.toml" }, { file = "Cargo.lock" }]
+
+[build-system]
+requires = ["maturin>=1.0,<2.0"]
+build-backend = "maturin"
+
+[dependency-groups]
+dev = [
+    "maturin>=1.15.0",
+    "mypy>=2.4.0",
+    "py-spy>=0.4.2",
+    "pytest>=9.1.1",
+    "ruff>=0.17.1",
+    "rust-just>=1.59.0",
+]
