@@ -18,7 +18,7 @@ select = ["E", "F", "I", "B", "UP", "SIM", "RUF"]
 
 [tool.mypy]
 strict = true
-files = ["src/python_native", "tests"]
+files = ["src/python_native", "tests", "examples"]
 mypy_path = "src"
 explicit_package_bases = true
 

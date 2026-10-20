@@ -296,7 +296,7 @@ settings, and the next `uv run` replaces it anyway.
 What this project adds to uv's maturin template:
 
 - **[`pyproject.toml`](pyproject.toml):** `[tool.ruff]`, `[tool.mypy]`
-  (strict, covering `src/python_native` and `tests`) and
+  (strict, covering `src/python_native`, `tests` and `examples`) and
   `[tool.pytest.ini_options]`. `[tool.uv]` gets
   `no-build-isolation-package` (see above). The template already has
   `cache-keys` covering `src/**/*.rs`, which is why `uv run` rebuilds after
