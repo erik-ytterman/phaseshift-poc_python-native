@@ -5,6 +5,10 @@ A Python package with a native core written in Rust, built with
 [uv](https://docs.astral.sh/uv/). Ruff, mypy, pytest, py-spy and
 [just](https://just.systems) are installed as project dev tools.
 
+It has the same functionality and Python API as its C++ twin,
+[`phaseshift-poc_python-cpp`](https://github.com/erik-ytterman/phaseshift-poc_python-cpp),
+and passes the same Python tests.
+
 The distribution name is `python-rust`; the import name is `python_rust`.
 
 ---
@@ -289,7 +293,7 @@ uv pip install dist/python_rust-*.whl   # or: pip install ...
 | `uv sync` / `uv run` | If changed | Yes, editable | `.so` in `src/` + `.pth` |
 | `just build` | Yes | **No** | Self-contained wheel in `dist/` |
 
-### Avoiding needless recompiles
+### Avoiding needless rebuilds
 
 pyo3's build script tells cargo to rebuild pyo3 whenever certain environment
 variables change (`PYO3_PYTHON`, `PYO3_ENVIRONMENT_SIGNATURE`, `VIRTUAL_ENV`,
