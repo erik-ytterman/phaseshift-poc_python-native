@@ -1,5 +1,4 @@
-# List recipes; hint if the venv is active but tab completion isn't
-# (e.g. activated with `source .venv/bin/activate` instead of activate.sh)
+# List recipes (and hint if tab completion is missing)
 default:
     @just --list
     @if [ -n "${VIRTUAL_ENV:-}" ] && [ -z "${JUST_COMPLETION_REGISTERED:-}" ]; then \
@@ -10,23 +9,23 @@ default:
 # maturin/uv set change, so sharing target/ with them recompiles every switch
 cargo_target := "target/cargo"
 
-# Install deps and build the Rust extension (`uv run` rebuilds it on change)
-setup:
-    uv sync
-
+# Format Python and Rust
 fmt:
     uv run ruff format .
     cargo fmt
 
+# Lint and check formatting (Python and Rust)
 lint:
     uv run ruff check .
     uv run ruff format --check .
     cargo fmt --check
     CARGO_TARGET_DIR={{cargo_target}} cargo clippy -- -D warnings
 
+# Type-check Python (mypy strict)
 typecheck:
     uv run mypy
 
+# Run Rust and Python tests
 test:
     CARGO_TARGET_DIR={{cargo_target}} cargo test
     uv run pytest
@@ -45,6 +44,7 @@ check: lint typecheck test
 profile script:
     uv run py-spy record --native -o profile.svg -- python {{script}}
 
+# Build a release wheel into target/wheels/
 build:
     uv run maturin build --release
 

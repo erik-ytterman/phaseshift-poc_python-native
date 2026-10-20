@@ -30,7 +30,6 @@ addopts = ["--import-mode=importlib"]
 module-name = "python_native._core"
 python-packages = ["python_native"]
 python-source = "src"
-features = ["pyo3/extension-module"]
 
 [tool.uv]
 # Build in the project venv: an isolated build env gets a new path every time,
