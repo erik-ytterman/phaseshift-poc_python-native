@@ -19,7 +19,7 @@ lint:
     uv run ruff check .
     uv run ruff format --check .
     cargo fmt --check
-    CARGO_TARGET_DIR={{cargo_target}} cargo clippy -- -D warnings
+    CARGO_TARGET_DIR={{cargo_target}} cargo clippy --all-targets -- -D warnings
 
 # Type-check Python (mypy strict)
 typecheck:
