@@ -44,7 +44,7 @@ for what happens.
 | `just check` | `lint` + `typecheck` + `test` |
 | `just profile <script> [args]` | py-spy flame graph incl. Rust frames → `profile.svg` |
 | `just build` | Release wheel into `target/wheels/` |
-| `just clean` | Remove venv, build output and caches |
+| `just clean` | Remove venv, build output and caches (keeps the `.so` in `src/`) |
 
 ## Creating a new project
 
@@ -258,6 +258,12 @@ package: through the venv, not their location on disk.
 | `.pyi` stubs | Next mypy run |
 | `.rs` files | Next `uv run` or `uv sync` (rebuilds on change) |
 
+uv also caches the editable wheel. When the venv is recreated (e.g. after
+`just clean`) and no source file changed, uv reinstalls that wheel without
+running maturin. The wheel holds only the `.pth` file, so the compiled
+`_core.abi3.so` must stay in `src/`: `just clean` keeps it. To force a full
+rebuild anyway, run `uv sync --reinstall-package python-rust`.
+
 It only works with the venv's Python: a system `python3` gives
 `ModuleNotFoundError`.
 
@@ -383,6 +389,7 @@ To activate automatically in every terminal, add to `~/.bashrc`:
    ```bash
    deactivate
    uv run just clean
+   uv sync --reinstall-package python-rust   # compile, not reuse uv's cached build
    uv run just check && uv run just build
    ```
 
@@ -424,4 +431,5 @@ To activate automatically in every terminal, add to `~/.bashrc`:
 | `just <TAB>` does nothing, or only completes file names | Completion not registered in this shell (`just` prints a hint) | `source ./activate.sh`; verify with `complete -p just` |
 | `ModuleNotFoundError: python_rust` | Not using the venv's Python | `uv run python ...` or `source ./activate.sh` |
 | Rust change not visible | Ran `python` in the activated venv, which doesn't rebuild | `uv run python ...` or `uv sync` |
+| `ImportError: cannot import name '_core'` | `src/python_rust/_core.abi3.so` deleted, and uv reinstalled its cached build | `uv sync --reinstall-package python-rust` |
 | Prompt shows the venv but commands fail | `.venv` deleted (e.g. `just clean`) while active | `deactivate`, then `source ./activate.sh` |

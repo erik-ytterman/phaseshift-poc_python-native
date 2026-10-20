@@ -31,10 +31,11 @@ test:
     CARGO_TARGET_DIR={{cargo_target}} cargo test
     uv run pytest
 
-# Remove all build artifacts and the venv
+# Remove build output, caches and the venv (keeps the compiled extension in src/)
 clean:
+    @# uv reinstalls the editable build from its cache, and that wheel only holds
+    @# the .pth file: without the .so in src/, nothing would rebuild it
     rm -rf .venv target dist .mypy_cache .ruff_cache .pytest_cache
-    find src -name '*.so' -delete -o -name '*.pyd' -delete
     rm -f profile.svg
     find . -name __pycache__ -type d -prune -exec rm -rf {} +
 
