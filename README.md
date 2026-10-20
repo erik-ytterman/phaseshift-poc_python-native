@@ -51,14 +51,16 @@ deactivate                     # leave the venv
 
 Without activating, prefix commands with `uv run` (e.g. `uv run just check`).
 
+There is no separate rebuild step: every `uv run` (which the recipes use)
+rebuilds the Rust extension if a `.rs` file changed.
+
 | Recipe | What it does |
 |---|---|
-| `just setup` | `uv sync` + build the Rust extension |
-| `just dev` | Rebuild the Rust extension into the venv (editable) |
+| `just setup` | `uv sync` (installs deps, builds the Rust extension) |
 | `just fmt` | Format Python (Ruff) and Rust (`cargo fmt`) |
 | `just lint` | Ruff, format checks, `cargo clippy -D warnings` |
 | `just typecheck` | mypy (strict) |
-| `just test` | Rebuild, then `cargo test` + `pytest` |
+| `just test` | `cargo test` + `pytest` |
 | `just check` | `lint` + `typecheck` + `test` |
 | `just profile <script>` | py-spy flame graph incl. Rust frames → `profile.svg` |
 | `just build` | Release wheel into `target/wheels/` |
@@ -210,7 +212,6 @@ def test_factor_negative() -> None:
 **5. Build, install and verify**
 
 ```bash
-just dev
 just check
 uv run python -c "import python_native; print(python_native.factor(360))"
 ```
@@ -241,7 +242,7 @@ the valid range in the docstring.
 
 ### Editable install
 
-`uv sync`, `uv run` and `just dev` install the package into `.venv` in
+`uv sync` and `uv run` install the package into `.venv` in
 **editable** mode (PEP 660). Instead of copying the package into
 `site-packages`, they write a single pointer file:
 
@@ -264,7 +265,7 @@ the venv, not their location on disk.
 |---|---|
 | `.py` files | Immediately (read from `src/`) |
 | `.pyi` stubs | Next mypy run |
-| `.rs` files | After a rebuild (`just dev`; `uv run` also rebuilds on change) |
+| `.rs` files | Next `uv run` or `uv sync` (rebuilds on change) |
 
 It only works with the venv's Python: a system `python3` has no `.pth` file
 and gives `ModuleNotFoundError`.
@@ -274,7 +275,6 @@ and gives `ModuleNotFoundError`.
 | Command | Compiles Rust | Installs into `.venv` | Output |
 |---|---|---|---|
 | `uv sync` / `uv run` | If changed | Yes, editable | `.pth` + `.so` in `src/` |
-| `just dev` (`maturin develop --uv`) | Always | Yes, editable | same |
 | `just build` / `uv build` | Yes | **No** | Wheel for distribution |
 
 A wheel is self-contained: it copies the package and `.so` into the target
@@ -314,7 +314,32 @@ addopts = ["--import-mode=importlib"]
 
 uv's template already provides `[tool.maturin]` (with `module-name`,
 `python-source = "src"`) and `[tool.uv] cache-keys` that include
-`src/**/*.rs`, which is why `uv run` rebuilds after Rust edits.
+`src/**/*.rs`, which is why `uv run` rebuilds after Rust edits. Add one
+setting to it:
+
+```toml
+[tool.uv]
+# Build in the project venv: an isolated build env gets a new path every time,
+# which makes pyo3 recompile from scratch on each Rust change
+no-build-isolation-package = ["python-native"]
+```
+
+### Avoiding needless recompiles
+
+pyo3's build script tells cargo to rebuild pyo3 whenever certain environment
+variables change (`PYO3_PYTHON`, `PYO3_ENVIRONMENT_SIGNATURE`, `VIRTUAL_ENV`,
+…). maturin sets them; plain `cargo` doesn't. Two things keep builds
+incremental:
+
+- `no-build-isolation-package` (above) gives uv's builds a stable
+  environment, so a Rust edit recompiles only this crate (~0.5 s instead of
+  ~10 s).
+- The `justfile` runs `cargo clippy` and `cargo test` with
+  `CARGO_TARGET_DIR=target/cargo`, so they don't invalidate maturin's
+  artifacts in `target/` and vice versa.
+
+Don't mix in `maturin develop`: it builds into the same venv with different
+settings, and the next `uv run` replaces its install anyway.
 
 ### `justfile`
 
@@ -327,14 +352,13 @@ default:
         echo "hint: venv is active but just tab completion is not; run: source ./activate.sh" >&2; \
     fi
 
-# Install deps and build the Rust extension
+# Plain cargo gets its own target dir: pyo3 rebuilds whenever env vars that
+# maturin/uv set change, so sharing target/ with them recompiles every switch
+cargo_target := "target/cargo"
+
+# Install deps and build the Rust extension (`uv run` rebuilds it on change)
 setup:
     uv sync
-    just dev
-
-# Rebuild the Rust extension into the venv
-dev:
-    uv run maturin develop --uv
 
 fmt:
     uv run ruff format .
@@ -344,13 +368,13 @@ lint:
     uv run ruff check .
     uv run ruff format --check .
     cargo fmt --check
-    cargo clippy -- -D warnings
+    CARGO_TARGET_DIR={{cargo_target}} cargo clippy -- -D warnings
 
 typecheck:
     uv run mypy
 
-test: dev
-    cargo test
+test:
+    CARGO_TARGET_DIR={{cargo_target}} cargo test
     uv run pytest
 
 # Remove all build artifacts and the venv
@@ -369,6 +393,7 @@ profile script:
 
 build:
     uv run maturin build --release
+
 ```
 
 ### `.gitignore` (additions to uv's template)
@@ -379,7 +404,7 @@ uv's template is Python-only and omits Rust build output.
 # Rust build output
 /target
 
-# Compiled extension placed in the package by `maturin develop`
+# Compiled extension placed in the package by the editable build
 src/python_native/*.so
 src/python_native/*.pyd
 
@@ -486,7 +511,7 @@ just --summary         # justfile found?
 ## Validating the setup
 
 1. **Tools:** `uv run just --version`, `uv run ruff --version`, etc.
-2. **Build and import:** `just dev`, then
+2. **Build and import:** `just setup`, then
    `uv run python -c "import python_native"`.
 3. **Checks pass:** `just check`.
 4. **Checks catch errors** — break things on purpose and revert:
@@ -504,7 +529,7 @@ just --summary         # justfile found?
    ```bash
    deactivate
    uv run just clean
-   uv sync && uv run just setup && uv run just check && uv run just build
+   uv run just setup && uv run just check && uv run just build
    ```
 
    Or `git clean -xdn` (dry run) / `git clean -xdf` to delete everything
@@ -514,22 +539,22 @@ just --summary         # justfile found?
 
    ```bash
    cd /tmp && rm -rf fresh && git clone <repo> fresh && cd fresh
-   uv sync && uv run just setup && uv run just check
+   uv run just setup && uv run just check
    ```
 
 ---
 
 ## Performance notes
 
-- **Benchmark release builds.** Debug builds can be slower than plain
-  Python:
+- **Builds are already optimized.** maturin's build backend, which `uv run`
+  uses, compiles with the `release` profile, so benchmark directly:
 
   ```bash
-  uv run maturin develop --uv --release
-  uv run --no-sync python examples/do_factorize.py 10000000000000061   # a 17-digit prime, ~1.5 s
+  uv run python examples/do_factorize.py 10000000000000061   # a 17-digit prime, ~1.5 s
   ```
 
-  `--no-sync` stops uv from replacing the release build with a debug one.
+  `cargo test` and `cargo clippy` use the debug profile; that only affects
+  Rust-side tests.
 - **Crossing the boundary costs.** Converting a large Python list to a
   `Vec` copies every element. Rust pays off when it does real work per item,
   or with NumPy arrays via `rust-numpy` (zero-copy).
@@ -550,5 +575,5 @@ just --summary         # justfile found?
 | `just` disappears after `uv sync` | `rust-just` not declared; `uv sync` removes undeclared packages | `uv add --dev rust-just` |
 | `ModuleNotFoundError: python_native` | Not using the venv's Python | `uv run python ...` or `source ./activate.sh` |
 | Prompt shows the venv but commands fail | `.venv` deleted (e.g. `just clean`) while active | `deactivate`, then `source ./activate.sh` |
-| Rust change not visible | Extension not rebuilt | `just dev` |
+| Rust change not visible | Ran `python` in the activated venv, which doesn't rebuild | `uv run python ...` or `uv sync` |
 

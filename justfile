@@ -6,14 +6,13 @@ default:
         echo "hint: venv is active but just tab completion is not; run: source ./activate.sh" >&2; \
     fi
 
-# Install deps and build the Rust extension
+# Plain cargo gets its own target dir: pyo3 rebuilds whenever env vars that
+# maturin/uv set change, so sharing target/ with them recompiles every switch
+cargo_target := "target/cargo"
+
+# Install deps and build the Rust extension (`uv run` rebuilds it on change)
 setup:
     uv sync
-    just dev
-
-# Rebuild the Rust extension into the venv
-dev:
-    uv run maturin develop --uv
 
 fmt:
     uv run ruff format .
@@ -23,13 +22,13 @@ lint:
     uv run ruff check .
     uv run ruff format --check .
     cargo fmt --check
-    cargo clippy -- -D warnings
+    CARGO_TARGET_DIR={{cargo_target}} cargo clippy -- -D warnings
 
 typecheck:
     uv run mypy
 
-test: dev
-    cargo test
+test:
+    CARGO_TARGET_DIR={{cargo_target}} cargo test
     uv run pytest
 
 # Remove all build artifacts and the venv

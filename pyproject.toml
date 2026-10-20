@@ -33,6 +33,9 @@ python-source = "src"
 features = ["pyo3/extension-module"]
 
 [tool.uv]
+# Build in the project venv: an isolated build env gets a new path every time,
+# which makes pyo3 recompile from scratch on each Rust change
+no-build-isolation-package = ["python-native"]
 cache-keys = [{ file = "pyproject.toml" }, { file = "src/**/*.rs" }, { file = "Cargo.toml" }, { file = "Cargo.lock" }]
 
 [build-system]

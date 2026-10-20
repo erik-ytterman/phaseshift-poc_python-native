@@ -12,7 +12,7 @@ wheels/
 # Rust build output
 /target
 
-# Compiled extension placed in the package by `maturin develop`
+# Compiled extension placed in the package by the editable build
 src/python_native/*.so
 src/python_native/*.pyd
 
