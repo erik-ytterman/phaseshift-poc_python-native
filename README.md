@@ -90,6 +90,8 @@ phaseshift-poc_python-native/
 │       └── py.typed        marker: package ships type information
 ├── tests/                  pytest tests (test_*.py)
 ├── examples/               runnable demos
+├── .github/workflows/
+│   └── ci.yml              runs `just check` on push and pull requests
 └── scripts/
     └── new-pyrust.sh       scaffolds a new project like this one
 ```
@@ -319,6 +321,9 @@ What this project adds to uv's maturin template:
 - **[`.gitignore`](.gitignore):** Rust build output (`/target`), the
   compiled extension in `src/`, `profile.svg` and tool caches. uv's
   template only covers Python.
+
+- **[`.github/workflows/ci.yml`](.github/workflows/ci.yml):** runs
+  `uv run just check` on every push to `main` and on pull requests.
 
 Keep `Cargo.lock` and `uv.lock` committed.
 
