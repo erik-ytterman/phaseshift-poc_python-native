@@ -32,7 +32,8 @@ Without activating, prefix commands with `uv run` (e.g. `uv run just check`).
 
 There is no separate build step: every `uv run` (which the recipes use)
 installs dependencies and rebuilds the Rust extension if a `.rs` file
-changed.
+changed. See [From clone to runnable project](#from-clone-to-runnable-project)
+for what happens.
 
 | Recipe | What it does |
 |---|---|
@@ -192,21 +193,51 @@ the valid range in the docstring.
 
 ## How it works
 
+### From clone to runnable project
+
+One command takes a fresh clone to a working package:
+
+```bash
+uv sync          # or any `uv run ...`, e.g. `uv run just check`
+```
+
+That runs these steps:
+
+1. **Python.** uv reads `.python-version` (3.13) and uses a matching
+   interpreter, downloading one into `~/.local/share/uv/python` if none is
+   installed.
+2. **Venv.** uv creates `.venv/` in the project.
+3. **Dependencies.** uv installs the exact versions from `uv.lock` into
+   `.venv`, including the `dev` group (maturin, ruff, mypy, pytest, py-spy,
+   just). This comes first because of `no-build-isolation-package`: the
+   project is built with the venv's own maturin.
+4. **Build.** `[build-system]` in `pyproject.toml` names maturin as the
+   build backend, so uv asks it for an **editable** build (PEP 660).
+   maturin then:
+   - runs `cargo build --release` on `src/lib.rs`, using the pyo3 features
+     from `Cargo.toml` (`abi3-py313`: one binary for every Python ≥ 3.13)
+   - copies the result to `src/python_native/_core.abi3.so`, next to the
+     Python code (`.pyd` on Windows)
+   - writes a wheel to `target/wheels/` that contains only a pointer file,
+     `python_native.pth`, holding the path to `src/`
+5. **Install.** uv installs that wheel, which puts the `.pth` file into
+   `.venv/lib/python3.13/site-packages/`.
+6. **Run.** At startup the venv's Python adds `src/` to `sys.path` because
+   of the `.pth` file. `import python_native` loads
+   `src/python_native/__init__.py`, which imports `_core`, which loads the
+   `.so`.
+
+Rust dependencies are compiled once, into `target/release/`. After that,
+every `uv run` compares the files listed in `[tool.uv] cache-keys` (the
+`.rs` files, `Cargo.toml`, `Cargo.lock`, `pyproject.toml`) with the last
+build, and repeats steps 4–5 only if one changed. Then only this crate is
+recompiled.
+
 ### Editable install
 
-`uv sync` and `uv run` install the package into `.venv` in **editable**
-mode (PEP 660). Instead of copying the package into `site-packages`, they
-write a single pointer file:
-
-```
-.venv/lib/python3.x/site-packages/python_native.pth   → <project>/src
-```
-
-Python adds that path to `sys.path` at startup, so imports resolve to your
-source folder. The build places the compiled extension next to your Python
-code, as `src/python_native/_core.abi3.so` (`.pyd` on Windows). That is how
-`examples/` and `tests/` find the package: through the venv, not their
-location on disk.
+Because the venv points at `src/` instead of holding a copy, edits show up
+without reinstalling. That is also how `examples/` and `tests/` find the
+package: through the venv, not their location on disk.
 
 | You edit | Takes effect |
 |---|---|
@@ -217,15 +248,26 @@ location on disk.
 It only works with the venv's Python: a system `python3` gives
 `ModuleNotFoundError`.
 
-### Install vs build
+### Building a wheel for distribution
+
+`just build` (`maturin build --release`) builds a regular wheel into
+`target/wheels/`, e.g.
+`python_native-0.1.0-cp313-abi3-manylinux_2_34_x86_64.whl`. Unlike the
+editable wheel, it contains the package itself (`__init__.py`,
+`_core.abi3.so`, `_core.pyi`, `py.typed`), with no link back to your source.
+It doesn't touch `.venv`.
+
+Install it in any environment with Python ≥ 3.13 on the same platform
+(here Linux x86_64, glibc ≥ 2.34). No Rust toolchain is needed there:
+
+```bash
+uv pip install target/wheels/python_native-*.whl   # or: pip install ...
+```
 
 | Command | Compiles Rust | Installs into `.venv` | Output |
 |---|---|---|---|
-| `uv sync` / `uv run` | If changed | Yes, editable | `.pth` + `.so` in `src/` |
-| `just build` / `uv build` | Yes | **No** | Wheel for distribution |
-
-A wheel is self-contained: it copies the package and `.so` into the target
-`site-packages`, with no link back to your source.
+| `uv sync` / `uv run` | If changed | Yes, editable | `.so` in `src/` + `.pth` |
+| `just build` | Yes | **No** | Self-contained wheel in `target/wheels/` |
 
 ### Avoiding needless recompiles
 
