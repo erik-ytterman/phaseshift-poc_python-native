@@ -46,7 +46,7 @@ check: lint typecheck test
 profile script *args:
     uv run py-spy record --native -o profile.svg -- python "{{script}}" {{args}}
 
-# Build a release wheel into target/wheels/
+# Build a release wheel (manylinux-tagged) into dist/
 build:
-    uv run maturin build --release
+    uv run maturin build --release --out dist
 

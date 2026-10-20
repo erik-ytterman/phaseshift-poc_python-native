@@ -43,7 +43,7 @@ for what happens.
 | `just test` | `cargo test` + `pytest` |
 | `just check` | `lint` + `typecheck` + `test` |
 | `just profile <script> [args]` | py-spy flame graph incl. Rust frames → `profile.svg` |
-| `just build` | Release wheel into `target/wheels/` |
+| `just build` | Release wheel (manylinux) into `dist/` |
 | `just clean` | Remove venv, build output and caches (keeps the `.so` in `src/`) |
 
 ## Creating a new project
@@ -269,9 +269,10 @@ It only works with the venv's Python: a system `python3` gives
 
 ### Building a wheel for distribution
 
-`just build` (`maturin build --release`) builds a regular wheel into
-`target/wheels/`, e.g.
-`python_rust-0.1.0-cp313-abi3-manylinux_2_34_x86_64.whl`. Unlike the
+`just build` (`maturin build --release --out dist`) builds a regular wheel
+into `dist/`, e.g.
+`python_rust-0.1.0-cp313-abi3-manylinux_2_34_x86_64.whl`. maturin tags it
+manylinux itself. Unlike the
 editable wheel, it contains the package itself (`__init__.py`,
 `_core.abi3.so`, `_core.pyi`, `py.typed`), with no link back to your source.
 It doesn't touch `.venv`.
@@ -280,13 +281,13 @@ Install it in any environment with Python ≥ 3.13 on the same platform
 (here Linux x86_64, glibc ≥ 2.34). No Rust toolchain is needed there:
 
 ```bash
-uv pip install target/wheels/python_rust-*.whl   # or: pip install ...
+uv pip install dist/python_rust-*.whl   # or: pip install ...
 ```
 
 | Command | Compiles Rust | Installs into `.venv` | Output |
 |---|---|---|---|
 | `uv sync` / `uv run` | If changed | Yes, editable | `.so` in `src/` + `.pth` |
-| `just build` | Yes | **No** | Self-contained wheel in `target/wheels/` |
+| `just build` | Yes | **No** | Self-contained wheel in `dist/` |
 
 ### Avoiding needless recompiles
 
