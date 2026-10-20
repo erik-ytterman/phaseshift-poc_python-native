@@ -37,6 +37,7 @@ mod _core {
     /// Return the prime factors of `n` in ascending order.
     ///
     /// `n` must be in the range 0 <= n < 2**64; otherwise OverflowError is raised.
+    /// 0 and 1 have no prime factors and return an empty list.
     /// The GIL is released while factorizing, so other Python threads keep running.
     #[pyfunction]
     fn factor(py: Python<'_>, n: u64) -> Vec<u64> {
