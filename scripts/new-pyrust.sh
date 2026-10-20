@@ -5,7 +5,7 @@ set -euo pipefail
 
 usage() {
     echo "Usage: $(basename "$0") [--python X.Y] <name> [directory]" >&2
-    exit 2
+    exit "${1:-2}"
 }
 
 python_version="3.13"
@@ -13,7 +13,7 @@ args=()
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --python) [[ $# -ge 2 ]] || usage; python_version="$2"; shift 2 ;;
-        -h | --help) usage ;;
+        -h | --help) usage 0 ;;
         -*) echo "Unknown option: $1" >&2; usage ;;
         *) args+=("$1"); shift ;;
     esac
@@ -27,15 +27,23 @@ py_tag="py${python_version//./}" # 3.13 -> py313
 
 [[ "$python_version" =~ ^3\.[0-9]+$ ]] || { echo "Invalid --python: $python_version" >&2; exit 2; }
 [[ -e "$dir" ]] && { echo "Already exists: $dir" >&2; exit 1; }
-for tool in uv cargo; do
+for tool in uv cargo git; do
     command -v "$tool" >/dev/null || { echo "Missing prerequisite: $tool" >&2; exit 1; }
 done
+
+# This repo is the template for the project-independent files
+template_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 # An active venv from another project would confuse uv
 unset VIRTUAL_ENV
 
-uv init --lib --build-backend maturin --python "$python_version" --name "$name" "$dir"
+# The new project is standalone: --no-workspace keeps uv from adding it as a
+# member of an enclosing project, and it gets its own git repo even when
+# created inside another one (uv init skips git init there)
+uv init --lib --build-backend maturin --no-workspace \
+    --python "$python_version" --name "$name" "$dir"
 cd "$dir"
+[[ -d .git ]] || git init -q
 uv add --dev ruff mypy py-spy pytest maturin rust-just
 
 # --- Cargo.toml: stable ABI matching requires-python ---------------------
@@ -108,83 +116,10 @@ profile.svg
 .pytest_cache/
 EOF
 
-# --- justfile --------------------------------------------------------------
-cat >justfile <<'EOF'
-# List recipes; hint if the venv is active but tab completion isn't
-# (e.g. activated with `source .venv/bin/activate` instead of activate.sh)
-default:
-    @just --list
-    @if [ -n "${VIRTUAL_ENV:-}" ] && [ -z "${JUST_COMPLETION_REGISTERED:-}" ]; then \
-        echo "hint: venv is active but just tab completion is not; run: source ./activate.sh" >&2; \
-    fi
-
-# Plain cargo gets its own target dir: pyo3 rebuilds whenever env vars that
-# maturin/uv set change, so sharing target/ with them recompiles every switch
-cargo_target := "target/cargo"
-
-# Install deps and build the Rust extension (`uv run` rebuilds it on change)
-setup:
-    uv sync
-
-fmt:
-    uv run ruff format .
-    cargo fmt
-
-lint:
-    uv run ruff check .
-    uv run ruff format --check .
-    cargo fmt --check
-    CARGO_TARGET_DIR={{cargo_target}} cargo clippy -- -D warnings
-
-typecheck:
-    uv run mypy
-
-test:
-    CARGO_TARGET_DIR={{cargo_target}} cargo test
-    uv run pytest
-
-# Remove all build artifacts and the venv
-clean:
-    rm -rf .venv target dist .mypy_cache .ruff_cache .pytest_cache
-    find src -name '*.so' -delete -o -name '*.pyd' -delete
-    rm -f profile.svg
-    find . -name __pycache__ -type d -prune -exec rm -rf {} +
-
-# Run every check (good for CI / pre-push)
-check: lint typecheck test
-
-# Profile a script, including Rust frames
-profile script:
-    uv run py-spy record --native -o profile.svg -- python {{script}}
-
-build:
-    uv run maturin build --release
-EOF
-
-# --- activate.sh -----------------------------------------------------------
-cat >activate.sh <<'EOF'
-# Activate the project venv and enable just tab completion (bash).
-# Usage: source ./activate.sh
-if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
-    echo "Run this with: source ${0}" >&2
-    exit 1
-fi
-
-_project_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-
-if [[ ! -d "$_project_dir/.venv" ]]; then
-    (cd "$_project_dir" && uv sync)
-fi
-
-source "$_project_dir/.venv/bin/activate"
-eval "$(JUST_COMPLETE=bash just)"
-# Marker for the justfile's `default` recipe: completion is registered in this shell.
-export JUST_COMPLETION_REGISTERED=1
-unset _project_dir
-EOF
+# --- justfile and activate.sh: project-independent, copied from this repo ---
+cp "$template_dir/justfile" "$template_dir/activate.sh" .
 
 # --- Build and verify ------------------------------------------------------
-uv run just setup
 uv run just check
 
 echo
