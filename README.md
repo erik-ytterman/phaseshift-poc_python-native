@@ -122,8 +122,8 @@ mod _core {
 
     /// Return the prime factors of `n` in ascending order.
     #[pyfunction]
-    fn factor(n: u64) -> Vec<u64> {
-        super::factor_impl(n)
+    fn factor(py: Python<'_>, n: u64) -> Vec<u64> {
+        py.detach(|| super::factor_impl(n))
     }
 }
 
@@ -394,7 +394,9 @@ To activate automatically in every terminal, add to `~/.bashrc`:
   `Vec` copies every element. Rust pays off when it does real work per item,
   or with NumPy arrays via `rust-numpy` (zero-copy).
 - Release the GIL during long Rust computations with `py.detach(...)`
-  (named `allow_threads` before PyO3 0.26).
+  (named `allow_threads` before PyO3 0.26), as `factor` does. Taking a
+  `py: Python<'_>` argument gives access to it; Python callers don't see
+  that argument. The closure can't touch Python objects.
 - On macOS, `py-spy` needs `sudo`.
 
 ---
