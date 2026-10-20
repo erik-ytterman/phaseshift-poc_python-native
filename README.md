@@ -418,6 +418,9 @@ To activate automatically in every terminal, add to `~/.bashrc`:
 
   `cargo test` and `cargo clippy` use the debug profile; that only affects
   Rust-side tests.
+- **Compared with the C++ version.** The C++ twin is 1–3% slower on large
+  primes; both spend almost all their time in the CPU's 64-bit division. See
+  the [benchmark in its README](https://github.com/erik-ytterman/phaseshift-poc_python-cpp#performance-notes).
 - **Crossing the boundary costs.** Converting a large Python list to a
   `Vec` copies every element. Rust pays off when it does real work per item,
   or with NumPy arrays via `rust-numpy` (zero-copy).
