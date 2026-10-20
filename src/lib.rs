@@ -11,4 +11,22 @@ mod _core {
     fn hello_from_bin() -> String {
         "Hello from python-native!".to_string()
     }
+
+    #[pyfunction]
+    fn factor(n: u64) -> Vec<u64> {
+        let mut factors = Vec::new();
+        let mut i = 2;
+        let mut n = n;
+        while i * i <= n {
+            while n.is_multiple_of(i) {
+                factors.push(i);
+                n /= i;
+            }
+            i += 1;
+        }
+        if n > 1 {
+            factors.push(n);
+        }
+        factors
+    }
 }
