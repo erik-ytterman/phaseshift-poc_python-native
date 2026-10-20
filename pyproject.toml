@@ -7,9 +7,7 @@ authors = [
     { name = "Erik", email = "erik.ytterman@phaseshift.se" }
 ]
 requires-python = ">=3.13"
-dependencies = [
-    "pytest>=9.1.1",
-]
+dependencies = []
 
 [tool.ruff]
 line-length = 100
@@ -44,4 +42,5 @@ dev = [
     "py-spy>=0.4.2",
     "pytest>=9.1.1",
     "ruff>=0.17.1",
+    "rust-just>=1.59.0",
 ]
