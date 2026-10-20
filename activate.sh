@@ -7,8 +7,10 @@ fi
 
 _project_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-if [[ ! -d "$_project_dir/.venv" ]]; then
-    (cd "$_project_dir" && uv sync)
+if [[ ! -d "$_project_dir/.venv" ]] && ! (cd "$_project_dir" && uv sync); then
+    echo "uv sync failed; venv not activated" >&2
+    unset _project_dir
+    return 1
 fi
 
 source "$_project_dir/.venv/bin/activate"
