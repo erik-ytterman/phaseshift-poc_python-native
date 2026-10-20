@@ -21,15 +21,18 @@ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 
 ## Creating a new project
 
-Use the scaffold script `new-pyrust.sh`:
+Use the scaffold script [`scripts/new-pyrust.sh`](scripts/new-pyrust.sh):
 
 ```bash
-new-pyrust python-native phaseshift-poc_python-native   # name, directory
+scripts/new-pyrust.sh python-native phaseshift-poc_python-native   # name, directory
+scripts/new-pyrust.sh --python 3.14 my-pkg                          # directory defaults to name
 ```
 
 It runs `uv init --lib --build-backend maturin`, adds the dev tools and
-configuration below, writes the `justfile`, extends `.gitignore`, adds a smoke
-test, and finishes with `just setup` and `just check`.
+configuration below, writes the `justfile` and `activate.sh`, sets the pyo3 stable ABI to match
+the Python version, wraps the template's native function in Python, extends
+`.gitignore`, adds a smoke test, and finishes with `just setup` and
+`just check`. It needs only uv and cargo, and uses GNU `sed` (Linux).
 
 To do it by hand:
 
@@ -89,8 +92,10 @@ phaseshift-poc_python-native/
 │       └── py.typed        marker: package ships type information
 ├── tests/
 │   └── test_*.py           pytest tests
-└── examples/
-    └── *.py                runnable demos
+├── examples/
+│   └── *.py                runnable demos
+└── scripts/
+    └── new-pyrust.sh       scaffolds a new project like this one
 ```
 
 The Rust code is a **private core** (`_core`, leading underscore = "don't
