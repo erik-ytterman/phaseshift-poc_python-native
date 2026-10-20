@@ -3,7 +3,7 @@ use pyo3::prelude::*;
 fn factor_impl(mut n: u64) -> Vec<u64> {
     let mut factors = Vec::new();
     let mut d = 2;
-    while d * d <= n {
+    while d <= n / d {
         while n.is_multiple_of(d) {
             factors.push(d);
             n /= d;
@@ -53,5 +53,9 @@ mod tests {
     fn edge_cases() {
         assert_eq!(factor_impl(0), Vec::<u64>::new());
         assert_eq!(factor_impl(1), Vec::<u64>::new());
+        assert_eq!(
+            factor_impl(u64::MAX),
+            vec![3, 5, 17, 257, 641, 65537, 6700417]
+        );
     }
 }

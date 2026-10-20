@@ -126,7 +126,7 @@ use pyo3::prelude::*;
 fn factor_impl(mut n: u64) -> Vec<u64> {
     let mut factors = Vec::new();
     let mut d = 2;
-    while d * d <= n {
+    while d <= n / d {
         while n.is_multiple_of(d) {
             factors.push(d);
             n /= d;
@@ -289,6 +289,7 @@ Rust — keep it in sync by hand** whenever a `#[pyfunction]` changes.
 ```toml
 [tool.ruff]
 line-length = 100
+target-version = "py313"   # match requires-python
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP", "SIM", "RUF"]
@@ -340,19 +341,22 @@ test: dev
     cargo test
     uv run pytest
 
-check: lint typecheck test
-
-profile script:
-    uv run py-spy record --native -o profile.svg -- python {{script}}
-
-build:
-    uv run maturin build --release
-
+# Remove all build artifacts and the venv
 clean:
     rm -rf .venv target dist .mypy_cache .ruff_cache .pytest_cache
     find src -name '*.so' -delete -o -name '*.pyd' -delete
     rm -f profile.svg
     find . -name __pycache__ -type d -prune -exec rm -rf {} +
+
+# Run every check (good for CI / pre-push)
+check: lint typecheck test
+
+# Profile a script, including Rust frames
+profile script:
+    uv run py-spy record --native -o profile.svg -- python {{script}}
+
+build:
+    uv run maturin build --release
 ```
 
 ### `.gitignore` (additions to uv's template)
@@ -364,14 +368,16 @@ uv's template is Python-only and omits Rust build output.
 /target
 
 # Compiled extension placed in the package by `maturin develop`
-*.so
-*.pyd
+src/python_native/*.so
+src/python_native/*.pyd
 
-# Tool caches and output
+# py-spy output
+profile.svg
+
+# Tool caches
 .mypy_cache/
 .ruff_cache/
 .pytest_cache/
-profile.svg
 ```
 
 Keep `Cargo.lock` and `uv.lock` committed. If `target/` was already
@@ -502,14 +508,15 @@ just --summary         # justfile found?
 
   ```bash
   uv run maturin develop --uv --release
-  uv run --no-sync python examples/benchmark.py
+  uv run --no-sync python examples/do_factorize.py 10000000000000061   # a 17-digit prime, ~1.5 s
   ```
 
   `--no-sync` stops uv from replacing the release build with a debug one.
 - **Crossing the boundary costs.** Converting a large Python list to a
   `Vec` copies every element. Rust pays off when it does real work per item,
   or with NumPy arrays via `rust-numpy` (zero-copy).
-- Release the GIL during long Rust computations with `py.allow_threads(...)`.
+- Release the GIL during long Rust computations with `py.detach(...)`
+  (named `allow_threads` before PyO3 0.26).
 - On macOS, `py-spy` needs `sudo`.
 
 ---

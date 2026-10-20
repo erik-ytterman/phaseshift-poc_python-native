@@ -19,7 +19,6 @@ src/python_native/*.pyd
 # py-spy output
 profile.svg
 
-
 # Tool caches
 .mypy_cache/
 .ruff_cache/
