@@ -13,8 +13,8 @@ wheels/
 /target
 
 # Compiled extension placed in the package by `maturin develop`
-src/my_project/*.so
-src/my_project/*.pyd
+src/python_native/*.so
+src/python_native/*.pyd
 
 # py-spy output
 profile.svg
