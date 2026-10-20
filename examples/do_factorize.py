@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
-import argparse, functools
+import argparse
+import functools
 
 import python_native
+
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Factorize a number")
