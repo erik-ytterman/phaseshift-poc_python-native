@@ -94,7 +94,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "python_native"
+name = "python_rust"
 version = "0.1.0"
 dependencies = [
  "pyo3",

@@ -1,5 +1,5 @@
 [project]
-name = "python-native"
+name = "python-rust"
 version = "0.1.0"
 description = "Proof of concept: a Python package with a native Rust core (PyO3 + maturin)"
 readme = "README.md"
@@ -18,7 +18,7 @@ select = ["E", "F", "I", "B", "UP", "SIM", "RUF"]
 
 [tool.mypy]
 strict = true
-files = ["src/python_native", "tests", "examples"]
+files = ["src/python_rust", "tests", "examples"]
 mypy_path = "src"
 explicit_package_bases = true
 
@@ -27,14 +27,14 @@ testpaths = ["tests"]
 addopts = ["--import-mode=importlib"]
 
 [tool.maturin]
-module-name = "python_native._core"
-python-packages = ["python_native"]
+module-name = "python_rust._core"
+python-packages = ["python_rust"]
 python-source = "src"
 
 [tool.uv]
 # Build in the project venv: an isolated build env gets a new path every time,
 # which makes pyo3 recompile from scratch on each Rust change
-no-build-isolation-package = ["python-native"]
+no-build-isolation-package = ["python-rust"]
 cache-keys = [{ file = "pyproject.toml" }, { file = "src/**/*.rs" }, { file = "Cargo.toml" }, { file = "Cargo.lock" }]
 
 [build-system]

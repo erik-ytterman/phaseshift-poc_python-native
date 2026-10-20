@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-import python_native
+import python_rust
 
 
 def main() -> None:
-    print(python_native.hello())
+    print(python_rust.hello())
 
 
 if __name__ == "__main__":

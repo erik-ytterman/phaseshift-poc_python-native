@@ -31,7 +31,7 @@ mod _core {
     /// Return a greeting from the Rust core.
     #[pyfunction]
     fn hello_from_bin() -> String {
-        "Hello from python-native!".to_string()
+        "Hello from python-rust!".to_string()
     }
 
     /// Return the prime factors of `n` in ascending order.

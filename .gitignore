@@ -13,8 +13,8 @@ wheels/
 /target
 
 # Compiled extension placed in the package by the editable build
-src/python_native/*.so
-src/python_native/*.pyd
+src/python_rust/*.so
+src/python_rust/*.pyd
 
 # py-spy output
 profile.svg

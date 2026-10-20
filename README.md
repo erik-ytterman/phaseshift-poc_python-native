@@ -1,11 +1,11 @@
-# python-native
+# python-rust
 
 A Python package with a native core written in Rust, built with
 [PyO3](https://pyo3.rs) and [maturin](https://www.maturin.rs), managed by
 [uv](https://docs.astral.sh/uv/). Ruff, mypy, pytest, py-spy and
 [just](https://just.systems) are installed as project dev tools.
 
-The distribution name is `python-native`; the import name is `python_native`.
+The distribution name is `python-rust`; the import name is `python_rust`.
 
 ---
 
@@ -83,8 +83,8 @@ phaseshift-poc_python-rust/
 ├── justfile                task shortcuts
 ├── activate.sh             activate venv + just completion (source it)
 ├── src/
-│   ├── lib.rs              Rust source → compiled to python_native._core
-│   └── python_native/
+│   ├── lib.rs              Rust source → compiled to python_rust._core
+│   └── python_rust/
 │       ├── __init__.py     public Python API, wraps _core
 │       ├── _core.pyi       type signatures for the Rust module
 │       └── py.typed        marker: package ships type information
@@ -97,7 +97,7 @@ phaseshift-poc_python-rust/
 ```
 
 The Rust code is a **private core** (`_core`, leading underscore = "don't
-import directly"); users only import the **public package** `python_native`.
+import directly"); users only import the **public package** `python_rust`.
 
 The name `_core` must match in three places: `[lib] name` in `Cargo.toml`,
 `mod _core` in `lib.rs`, and `module-name` in `[tool.maturin]`. Its stub
@@ -148,7 +148,7 @@ Linux, uv's libpython on the library path:
 LD_LIBRARY_PATH="$(uv run python -c 'import sysconfig; print(sysconfig.get_config_var("LIBDIR"))')" just test
 ```
 
-**2. Type stub — [`src/python_native/_core.pyi`](src/python_native/_core.pyi).**
+**2. Type stub — [`src/python_rust/_core.pyi`](src/python_rust/_core.pyi).**
 Type checkers can't inspect the compiled `.so`, so declare the signature by
 hand:
 
@@ -156,13 +156,13 @@ hand:
 def factor(n: int) -> list[int]: ...
 ```
 
-**3. Public API — [`src/python_native/__init__.py`](src/python_native/__init__.py).**
+**3. Public API — [`src/python_rust/__init__.py`](src/python_rust/__init__.py).**
 Wrap the native function in a plain Python function. This keeps the public
 name and signature independent of the Rust side. The wrapper needs its own
 docstring, because the Rust `///` comment ends up on `_core.factor`.
 
 ```python
-from python_native import _core
+from python_rust import _core
 
 
 def factor(n: int) -> list[int]:
@@ -173,11 +173,11 @@ def factor(n: int) -> list[int]:
 **4. Test — [`tests/test_factor.py`](tests/test_factor.py).**
 
 ```python
-import python_native
+import python_rust
 
 
 def test_factor() -> None:
-    assert python_native.factor(12) == [2, 2, 3]
+    assert python_rust.factor(12) == [2, 2, 3]
 ```
 
 Then run `just check`.
@@ -229,15 +229,15 @@ That runs these steps:
    maturin then:
    - runs `cargo build --release` on `src/lib.rs`, using the pyo3 features
      from `Cargo.toml` (`abi3-py313`: one binary for every Python ≥ 3.13)
-   - copies the result to `src/python_native/_core.abi3.so`, next to the
+   - copies the result to `src/python_rust/_core.abi3.so`, next to the
      Python code (`.pyd` on Windows)
    - writes a wheel to `target/wheels/` that contains only a pointer file,
-     `python_native.pth`, holding the path to `src/`
+     `python_rust.pth`, holding the path to `src/`
 5. **Install.** uv installs that wheel, which puts the `.pth` file into
    `.venv/lib/python3.13/site-packages/`.
 6. **Run.** At startup the venv's Python adds `src/` to `sys.path` because
-   of the `.pth` file. `import python_native` loads
-   `src/python_native/__init__.py`, which imports `_core`, which loads the
+   of the `.pth` file. `import python_rust` loads
+   `src/python_rust/__init__.py`, which imports `_core`, which loads the
    `.so`.
 
 Rust dependencies are compiled once, into `target/release/`. After that,
@@ -265,7 +265,7 @@ It only works with the venv's Python: a system `python3` gives
 
 `just build` (`maturin build --release`) builds a regular wheel into
 `target/wheels/`, e.g.
-`python_native-0.1.0-cp313-abi3-manylinux_2_34_x86_64.whl`. Unlike the
+`python_rust-0.1.0-cp313-abi3-manylinux_2_34_x86_64.whl`. Unlike the
 editable wheel, it contains the package itself (`__init__.py`,
 `_core.abi3.so`, `_core.pyi`, `py.typed`), with no link back to your source.
 It doesn't touch `.venv`.
@@ -274,7 +274,7 @@ Install it in any environment with Python ≥ 3.13 on the same platform
 (here Linux x86_64, glibc ≥ 2.34). No Rust toolchain is needed there:
 
 ```bash
-uv pip install target/wheels/python_native-*.whl   # or: pip install ...
+uv pip install target/wheels/python_rust-*.whl   # or: pip install ...
 ```
 
 | Command | Compiles Rust | Installs into `.venv` | Output |
@@ -306,7 +306,7 @@ settings, and the next `uv run` replaces it anyway.
 What this project adds to uv's maturin template:
 
 - **[`pyproject.toml`](pyproject.toml):** `[tool.ruff]`, `[tool.mypy]`
-  (strict, covering `src/python_native`, `tests` and `examples`) and
+  (strict, covering `src/python_rust`, `tests` and `examples`) and
   `[tool.pytest.ini_options]`. `[tool.uv]` gets
   `no-build-isolation-package` (see above). The template already has
   `cache-keys` covering `src/**/*.rs`, which is why `uv run` rebuilds after
@@ -422,6 +422,6 @@ To activate automatically in every terminal, add to `~/.bashrc`:
 | Problem | Cause | Fix |
 |---|---|---|
 | `just <TAB>` does nothing, or only completes file names | Completion not registered in this shell (`just` prints a hint) | `source ./activate.sh`; verify with `complete -p just` |
-| `ModuleNotFoundError: python_native` | Not using the venv's Python | `uv run python ...` or `source ./activate.sh` |
+| `ModuleNotFoundError: python_rust` | Not using the venv's Python | `uv run python ...` or `source ./activate.sh` |
 | Rust change not visible | Ran `python` in the activated venv, which doesn't rebuild | `uv run python ...` or `uv sync` |
 | Prompt shows the venv but commands fail | `.venv` deleted (e.g. `just clean`) while active | `deactivate`, then `source ./activate.sh` |

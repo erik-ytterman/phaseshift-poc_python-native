@@ -1,4 +1,4 @@
-from python_native import _core
+from python_rust import _core
 
 
 def hello() -> str:

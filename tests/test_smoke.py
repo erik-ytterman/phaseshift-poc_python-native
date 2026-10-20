@@ -1,5 +1,5 @@
-import python_native
+import python_rust
 
 
 def test_hello() -> None:
-    assert isinstance(python_native.hello(), str)
+    assert isinstance(python_rust.hello(), str)

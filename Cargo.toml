@@ -1,5 +1,5 @@
 [package]
-name = "python_native"
+name = "python_rust"
 version = "0.1.0"
 edition = "2024"
 # Edition 2024 needs 1.85; u64::is_multiple_of needs 1.87

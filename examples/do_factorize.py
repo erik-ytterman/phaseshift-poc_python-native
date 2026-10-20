@@ -2,7 +2,7 @@
 import argparse
 import math
 
-import python_native
+import python_rust
 
 
 def main() -> None:
@@ -12,7 +12,7 @@ def main() -> None:
     n = args.n
     if not 2 <= n < 2**64:
         parser.error(f"n must be in the range 2 <= n < 2**64, got {n}")
-    factors = python_native.factor(n)
+    factors = python_rust.factor(n)
     print(f"Factors of {n}: {factors}")
     check = math.prod(factors)
     print(f"Check: {check} == {n}: {check == n}")
