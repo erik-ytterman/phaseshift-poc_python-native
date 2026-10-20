@@ -2,13 +2,18 @@ use pyo3::prelude::*;
 
 fn factor_impl(mut n: u64) -> Vec<u64> {
     let mut factors = Vec::new();
-    let mut d = 2;
+    while n >= 2 && n.is_multiple_of(2) {
+        factors.push(2);
+        n /= 2;
+    }
+    // Only odd divisors remain
+    let mut d = 3;
     while d <= n / d {
         while n.is_multiple_of(d) {
             factors.push(d);
             n /= d;
         }
-        d += 1;
+        d += 2;
     }
     if n > 1 {
         factors.push(n);
@@ -48,6 +53,9 @@ mod tests {
         assert_eq!(factor_impl(12), vec![2, 2, 3]);
         assert_eq!(factor_impl(360), vec![2, 2, 2, 3, 3, 5]);
         assert_eq!(factor_impl(97), vec![97]);
+        assert_eq!(factor_impl(2), vec![2]);
+        assert_eq!(factor_impl(1024), vec![2; 10]);
+        assert_eq!(factor_impl(2 * 9 * 25), vec![2, 3, 3, 5, 5]);
     }
 
     #[test]
@@ -58,5 +66,7 @@ mod tests {
             factor_impl(u64::MAX),
             vec![3, 5, 17, 257, 641, 65537, 6700417]
         );
+        // Square of a prime: the divisor must reach exactly sqrt(n)
+        assert_eq!(factor_impl(65_521 * 65_521), vec![65_521, 65_521]);
     }
 }

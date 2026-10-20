@@ -385,7 +385,7 @@ To activate automatically in every terminal, add to `~/.bashrc`:
   uses, compiles with the `release` profile, so benchmark directly:
 
   ```bash
-  uv run python examples/do_factorize.py 10000000000000061   # a 17-digit prime, ~1.5 s
+  uv run python examples/do_factorize.py 10000000000000061   # a 17-digit prime, ~0.5 s
   ```
 
   `cargo test` and `cargo clippy` use the debug profile; that only affects
