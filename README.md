@@ -62,6 +62,9 @@ from this repo, and finishes with `just check`. The result is standalone,
 with its own venv and git repo and no reference to this repo, even when
 created inside it; later changes here don't affect it.
 
+The name must be lowercase letters, digits and single hyphens (e.g.
+`my-pkg`); the import name replaces hyphens with underscores (`my_pkg`).
+
 Requirements: uv, cargo and git, and GNU `sed` (Linux). Run the script from
 a checkout of this repo, since that is where it copies the two files from;
 the current directory doesn't matter.

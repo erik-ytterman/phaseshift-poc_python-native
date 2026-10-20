@@ -26,6 +26,9 @@ module="${name//-/_}"
 py_tag="py${python_version//./}" # 3.13 -> py313
 
 [[ "$python_version" =~ ^3\.[0-9]+$ ]] || { echo "Invalid --python: $python_version" >&2; exit 2; }
+# uv normalizes other names (My.Pkg -> my-pkg), which would break the paths below
+[[ "$name" =~ ^[a-z][a-z0-9]*(-[a-z0-9]+)*$ ]] ||
+    { echo "Invalid name: $name (use lowercase letters, digits and single hyphens)" >&2; exit 2; }
 [[ -e "$dir" ]] && { echo "Already exists: $dir" >&2; exit 1; }
 for tool in uv cargo git; do
     command -v "$tool" >/dev/null || { echo "Missing prerequisite: $tool" >&2; exit 1; }
