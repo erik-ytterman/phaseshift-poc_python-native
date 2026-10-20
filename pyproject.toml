@@ -1,7 +1,7 @@
 [project]
 name = "python-native"
 version = "0.1.0"
-description = "Add your description here"
+description = "Proof of concept: a Python package with a native Rust core (PyO3 + maturin)"
 readme = "README.md"
 authors = [
     { name = "Erik", email = "erik.ytterman@phaseshift.se" }
@@ -11,7 +11,7 @@ dependencies = []
 
 [tool.ruff]
 line-length = 100
-target-version = "py312"
+target-version = "py313"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP", "SIM", "RUF"]
