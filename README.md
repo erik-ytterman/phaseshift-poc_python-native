@@ -42,7 +42,7 @@ for what happens.
 | `just typecheck` | mypy (strict) |
 | `just test` | `cargo test` + `pytest` |
 | `just check` | `lint` + `typecheck` + `test` |
-| `just profile <script>` | py-spy flame graph incl. Rust frames → `profile.svg` |
+| `just profile <script> [args]` | py-spy flame graph incl. Rust frames → `profile.svg` |
 | `just build` | Release wheel into `target/wheels/` |
 | `just clean` | Remove venv, build output and caches |
 

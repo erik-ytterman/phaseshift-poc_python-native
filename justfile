@@ -40,9 +40,9 @@ clean:
 # Run every check (good for CI / pre-push)
 check: lint typecheck test
 
-# Profile a script, including Rust frames
-profile script:
-    uv run py-spy record --native -o profile.svg -- python {{script}}
+# Profile a script (with its arguments), including Rust frames
+profile script *args:
+    uv run py-spy record --native -o profile.svg -- python "{{script}}" {{args}}
 
 # Build a release wheel into target/wheels/
 build:
