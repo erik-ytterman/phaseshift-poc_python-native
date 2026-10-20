@@ -82,7 +82,7 @@ phaseshift-poc_python-native/
 ├── src/
 │   ├── lib.rs              Rust source → compiled to python_native._core
 │   └── python_native/
-│       ├── __init__.py     public Python API, re-exports from _core
+│       ├── __init__.py     public Python API, wraps _core
 │       ├── _core.pyi       type signatures for the Rust module
 │       └── py.typed        marker: package ships type information
 ├── tests/
@@ -172,10 +172,17 @@ def factor(n: int) -> list[int]: ...
 
 **3. Public API — `src/python_native/__init__.py`**
 
-```python
-from python_native._core import factor
+Wrap each native function in a plain Python function. The wrapper keeps the
+public name and signature independent of the Rust side, and carries its own
+docstring (the Rust `__doc__` stays on `_core.factor`).
 
-__all__ = ["factor"]
+```python
+from python_native import _core
+
+
+def factor(n: int) -> list[int]:
+    """Return the prime factors of `n` in ascending order."""
+    return _core.factor(n)
 ```
 
 **4. Test — `tests/test_factor.py`**
