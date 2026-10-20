@@ -25,3 +25,12 @@ def test_factor_too_large() -> None:
 def test_factor_float() -> None:
     with pytest.raises(TypeError):
         python_native.factor(12.0)  # type: ignore[arg-type]
+
+
+def test_factor_index() -> None:
+    # Objects with __index__ (e.g. NumPy integers) are accepted like int
+    class Twelve:
+        def __index__(self) -> int:
+            return 12
+
+    assert python_native.factor(Twelve()) == [2, 2, 3]  # type: ignore[arg-type]
