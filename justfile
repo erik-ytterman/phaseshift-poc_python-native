@@ -1,7 +1,8 @@
 # List recipes (and hint if tab completion is missing)
 default:
     @just --list
-    @if [ -n "${VIRTUAL_ENV:-}" ] && [ -z "${JUST_COMPLETION_REGISTERED:-}" ]; then \
+    @# VIRTUAL_ENV_PROMPT is set by activating the venv, not by `uv run`
+    @if [ -n "${VIRTUAL_ENV_PROMPT:-}" ] && [ -z "${JUST_COMPLETION_REGISTERED:-}" ]; then \
         echo "hint: venv is active but just tab completion is not; run: source ./activate.sh" >&2; \
     fi
 
