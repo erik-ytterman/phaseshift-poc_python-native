@@ -138,6 +138,14 @@ mod tests {
 }
 ```
 
+Test the Python-facing behaviour with pytest (step 4). A Rust test can
+call into Python too, but needs `Python::initialize()` first and, on
+Linux, uv's libpython on the library path:
+
+```bash
+LD_LIBRARY_PATH="$(uv run python -c 'import sysconfig; print(sysconfig.get_config_var("LIBDIR"))')" just test
+```
+
 **2. Type stub — [`src/python_native/_core.pyi`](src/python_native/_core.pyi).**
 Type checkers can't inspect the compiled `.so`, so declare the signature by
 hand:
@@ -302,7 +310,10 @@ What this project adds to uv's maturin template:
   `cache-keys` covering `src/**/*.rs`, which is why `uv run` rebuilds after
   Rust edits.
 - **[`Cargo.toml`](Cargo.toml):** the stable-ABI feature is `abi3-py313`
-  to match `requires-python` (the template has `abi3-py39`).
+  to match `requires-python` (the template has `abi3-py39`), and the
+  template's `extension-module` feature is dropped. maturin (≥ 1.15, also
+  the `[build-system]` minimum) sets `PYO3_BUILD_EXTENSION_MODULE` instead,
+  so the extension still doesn't link libpython, while `cargo test` can.
 - **[`justfile`](justfile):** the recipes above.
 - **[`activate.sh`](activate.sh):** see the next section.
 - **[`.gitignore`](.gitignore):** Rust build output (`/target`), the

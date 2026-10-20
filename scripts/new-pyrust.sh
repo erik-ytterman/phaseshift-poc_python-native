@@ -49,13 +49,19 @@ cd "$dir"
 [[ -d .git ]] || git init -q
 uv add --dev ruff mypy py-spy pytest maturin rust-just
 
-# --- Cargo.toml: stable ABI matching requires-python ---------------------
+# --- Cargo.toml: stable ABI matching requires-python, no extension-module ----
 sed -i -E \
+    -e '/^# "extension-module" tells/c\
+# No "extension-module" feature: maturin sets PYO3_BUILD_EXTENSION_MODULE instead, so the\
+# extension doesn'"'"'t link libpython but `cargo test` binaries can (needed to call Python from Rust tests)' \
+    -e 's/"extension-module", //' \
     -e "s/abi3-py[0-9]+/abi3-$py_tag/" \
     -e "s/minimum Python version 3\.[0-9]+/minimum Python version $python_version (matches requires-python)/" \
     Cargo.toml
 
 # --- pyproject.toml --------------------------------------------------------
+# maturin sets PYO3_BUILD_EXTENSION_MODULE, which replaces the extension-module feature
+sed -i 's/"maturin>=1\.0,<2\.0"/"maturin>=1.15,<2.0"/' pyproject.toml
 sed -i 's|^\[tool\.uv\]$|[tool.uv]\
 # Build in the project venv: an isolated build env gets a new path every time,\
 # which makes pyo3 recompile from scratch on each Rust change\

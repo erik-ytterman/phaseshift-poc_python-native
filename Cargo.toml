@@ -11,6 +11,7 @@ name = "_core"
 crate-type = ["cdylib"]
 
 [dependencies]
-# "extension-module" tells pyo3 we want to build an extension module (skips linking against libpython.so)
+# No "extension-module" feature: maturin sets PYO3_BUILD_EXTENSION_MODULE instead, so the
+# extension doesn't link libpython but `cargo test` binaries can (needed to call Python from Rust tests)
 # "abi3-py313" tells pyo3 (and maturin) to build using the stable ABI with minimum Python version 3.13 (matches requires-python)
-pyo3 = { version = "0.28.2", features = ["extension-module", "abi3-py313"] }
+pyo3 = { version = "0.28.2", features = ["abi3-py313"] }
