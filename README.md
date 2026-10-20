@@ -74,7 +74,7 @@ the current directory doesn't matter.
 ## Project layout
 
 ```
-phaseshift-poc_python-native/
+phaseshift-poc_python-rust/
 ├── pyproject.toml          Python project definition + tool config
 ├── uv.lock                 exact Python dependency versions (commit it)
 ├── .python-version         Python version uv uses
