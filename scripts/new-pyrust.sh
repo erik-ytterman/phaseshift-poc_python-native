@@ -67,6 +67,17 @@ sed -i 's|^\[tool\.uv\]$|[tool.uv]\
 # which makes pyo3 recompile from scratch on each Rust change\
 no-build-isolation-package = ["'"$name"'"]|' pyproject.toml
 
+# Fail loudly if the uv template changed and an edit above matched nothing
+for check in "Cargo.toml:abi3-$py_tag" 'pyproject.toml:"maturin>=1.15,<2.0"' \
+    'pyproject.toml:no-build-isolation-package'; do
+    grep -qF "${check#*:}" "${check%%:*}" ||
+        { echo "${check%%:*} edit failed (${check#*:}); has uv's template changed?" >&2; exit 1; }
+done
+if grep -q 'features = .*"extension-module"' Cargo.toml; then
+    echo "Cargo.toml edit failed (extension-module); has uv's template changed?" >&2
+    exit 1
+fi
+
 cat >>pyproject.toml <<EOF
 
 [tool.ruff]
