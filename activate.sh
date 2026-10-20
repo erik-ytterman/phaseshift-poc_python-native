@@ -13,5 +13,7 @@ fi
 
 source "$_project_dir/.venv/bin/activate"
 eval "$(JUST_COMPLETE=bash just)"
+# Marker for the justfile's `default` recipe: completion is registered in this shell.
+export JUST_COMPLETION_REGISTERED=1
 unset _project_dir
 

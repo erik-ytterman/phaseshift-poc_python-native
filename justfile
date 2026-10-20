@@ -1,5 +1,10 @@
+# List recipes; hint if the venv is active but tab completion isn't
+# (e.g. activated with `source .venv/bin/activate` instead of activate.sh)
 default:
     @just --list
+    @if [ -n "${VIRTUAL_ENV:-}" ] && [ -z "${JUST_COMPLETION_REGISTERED:-}" ]; then \
+        echo "hint: venv is active but just tab completion is not; run: source ./activate.sh" >&2; \
+    fi
 
 # Install deps and build the Rust extension
 setup:

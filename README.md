@@ -312,8 +312,13 @@ uv's template already provides `[tool.maturin]` (with `module-name`,
 ### `justfile`
 
 ```just
+# List recipes; hint if the venv is active but tab completion isn't
+# (e.g. activated with `source .venv/bin/activate` instead of activate.sh)
 default:
     @just --list
+    @if [ -n "${VIRTUAL_ENV:-}" ] && [ -z "${JUST_COMPLETION_REGISTERED:-}" ]; then \
+        echo "hint: venv is active but just tab completion is not; run: source ./activate.sh" >&2; \
+    fi
 
 # Install deps and build the Rust extension
 setup:
@@ -408,6 +413,8 @@ fi
 
 source "$_project_dir/.venv/bin/activate"
 eval "$(JUST_COMPLETE=bash just)"
+# Marker for the justfile's `default` recipe: completion is registered in this shell.
+export JUST_COMPLETION_REGISTERED=1
 unset _project_dir
 ```
 
@@ -426,6 +433,10 @@ just <TAB><TAB>            # lists the recipes
 - Completion lives only in the current shell; it is gone after closing the
   terminal or opening a new one.
 - Bash only (`BASH_SOURCE`, `JUST_COMPLETE=bash`).
+- Exports `JUST_COMPLETION_REGISTERED=1`. If the venv is active without it
+  (e.g. activated with `source .venv/bin/activate`), plain `just` prints a
+  hint to source `activate.sh`. The variable is inherited by child shells
+  while the completion is not, so a nested `bash` gets no hint.
 
 ### Why not in `~/.bashrc`?
 
@@ -528,7 +539,7 @@ just --summary         # justfile found?
 | mypy: `Duplicate module named "__main__"` | Same filename in `tests/` and the package; `tests/` isn't a package | Rename test files to `test_*.py`; set `mypy_path` + `explicit_package_bases` |
 | mypy: `tests: Cannot read file` | Path in `files` doesn't exist | Create `tests/` or remove it from `files` |
 | `target/` shows up in git | uv's `.gitignore` is Python-only | Add `/target` |
-| `just <TAB>` does nothing | Completion not registered in this shell | `source ./activate.sh` (see *Activating the venv*) |
+| `just <TAB>` does nothing, or only completes file names | Completion not registered in this shell, e.g. venv activated with `.venv/bin/activate` (`just` prints a hint) | `source ./activate.sh`; verify with `complete -p just` (see *Activating the venv*) |
 | `just` disappears after `uv sync` | `rust-just` not declared; `uv sync` removes undeclared packages | `uv add --dev rust-just` |
 | `ModuleNotFoundError: python_native` | Not using the venv's Python | `uv run python ...` or `source ./activate.sh` |
 | Prompt shows the venv but commands fail | `.venv` deleted (e.g. `just clean`) while active | `deactivate`, then `source ./activate.sh` |
