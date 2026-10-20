@@ -22,6 +22,10 @@ files = ["src/python_native", "tests"]
 mypy_path = "src"
 explicit_package_bases = true
 
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = ["--import-mode=importlib"]
+
 [tool.maturin]
 module-name = "python_native._core"
 python-packages = ["python_native"]
