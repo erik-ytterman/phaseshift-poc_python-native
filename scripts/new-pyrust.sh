@@ -136,8 +136,28 @@ profile.svg
 .pytest_cache/
 EOF
 
-# --- justfile and activate.sh: project-independent, copied from this repo ---
+# --- Project-independent files, copied from this repo ----------------------
 cp "$template_dir/justfile" "$template_dir/activate.sh" .
+mkdir -p .github/workflows
+cp "$template_dir/.github/dependabot.yml" .github/
+cp "$template_dir/.github/workflows/ci.yml" .github/workflows/
+
+# CI tests this repo's Python versions; drop those older than requires-python
+ci_pythons=()
+for version in $(sed -n 's/^ *python: \[\(.*\)\]$/\1/p' .github/workflows/ci.yml | tr -d '",'); do
+    if (( ${version#3.} >= ${python_version#3.} )); then
+        ci_pythons+=("\"$version\"")
+    fi
+done
+[[ ${#ci_pythons[@]} -gt 0 ]] || ci_pythons=("\"$python_version\"")
+ci_list="$(IFS=,; echo "${ci_pythons[*]}")"
+sed -i 's/^\( *python: \)\[.*\]$/\1['"${ci_list//,/, }"']/' .github/workflows/ci.yml
+grep -qF "python: [${ci_list//,/, }]" .github/workflows/ci.yml ||
+    { echo "ci.yml edit failed (Python matrix); has its format changed?" >&2; exit 1; }
+# The minimum Rust version job (in include:) runs on the oldest Python
+sed -i 's/\(python: \)"3\.[0-9]*"/\1'"${ci_pythons[0]}"'/' .github/workflows/ci.yml
+grep -qF "python: ${ci_pythons[0]}, rust:" .github/workflows/ci.yml ||
+    { echo "ci.yml edit failed (minimum Rust job); has its format changed?" >&2; exit 1; }
 
 # --- Build and verify ------------------------------------------------------
 uv run just check

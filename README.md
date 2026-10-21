@@ -63,17 +63,49 @@ scripts/new-pyrust.sh --python 3.14 my-pkg ~/x   # Python version (default 3.13)
 ```
 
 It starts from `uv init --lib --build-backend maturin`, adds the dev tools
-and the configuration described below, copies `justfile` and `activate.sh`
-from this repo, and finishes with `just check`. The result is standalone,
-with its own venv and git repo and no reference to this repo, even when
-created inside it; later changes here don't affect it.
+and the configuration described below, copies `justfile`, `activate.sh` and
+the CI files in `.github/` from this repo (dropping CI Python versions older
+than `--python`, and moving the minimum Rust job to the oldest one left),
+and finishes with `just check`. The result is standalone, with its own venv
+and git repo and no reference to this repo, even when created inside it;
+later changes here don't affect it.
 
 The name must be lowercase letters, digits and single hyphens (e.g.
 `my-pkg`); the import name replaces hyphens with underscores (`my_pkg`).
 
 Requirements: uv, cargo and git, and GNU `sed` (Linux). Run the script from
-a checkout of this repo, since that is where it copies the two files from;
+a checkout of this repo, since that is where it copies those files from;
 the current directory doesn't matter.
+
+Example, creating `fast-math` next to this repo:
+
+```bash
+cd ~/Work
+phaseshift-poc_python-rust/scripts/new-pyrust.sh --python 3.13 fast-math
+# ... uv and cargo output, then `just check` lints and tests it, ending with:
+# Created fast-math. Next: cd fast-math && source ./activate.sh
+```
+
+```
+fast-math/
+├── pyproject.toml  uv.lock  .python-version  Cargo.toml  Cargo.lock
+├── justfile  activate.sh  .gitignore  README.md
+├── .github/                ci.yml and dependabot.yml, as in this repo
+├── src/
+│   ├── lib.rs              mod _core with hello_from_bin()
+│   └── fast_math/
+│       ├── __init__.py     hello() wraps _core.hello_from_bin()
+│       ├── _core.pyi
+│       └── py.typed
+└── tests/test_smoke.py
+```
+
+```bash
+cd fast-math && source ./activate.sh
+python -c "import fast_math; print(fast_math.hello())"   # Hello from fast-math!
+```
+
+From there, add functions as in [Adding a native function](#adding-a-native-function).
 
 ---
 
