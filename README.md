@@ -16,7 +16,9 @@ The distribution name is `python-rust`; the import name is `python_rust`.
 ## Prerequisites
 
 Only uv and the Rust toolchain are needed. Everything else (including `just`)
-is installed by uv into the project venv.
+is installed by uv into the project venv. CI tests Ubuntu 24.04 and 26.04
+with Python 3.13, 3.14 and 3.15 and stable Rust, plus Rust 1.87, the
+minimum (`rust-version` in `Cargo.toml`).
 
 ```bash
 curl -LsSf https://astral.sh/uv/install.sh | sh
@@ -94,8 +96,9 @@ phaseshift-poc_python-rust/
 │       └── py.typed        marker: package ships type information
 ├── tests/                  pytest tests (test_*.py)
 ├── examples/               runnable demos
-├── .github/workflows/
-│   └── ci.yml              runs `just check` on push and pull requests
+├── .github/
+│   ├── workflows/ci.yml    runs `just check` and `just build` on push and PRs
+│   └── dependabot.yml      weekly PRs that update the CI actions
 └── scripts/
     └── new-pyrust.sh       scaffolds a new project like this one
 ```
@@ -328,15 +331,65 @@ What this project adds to uv's maturin template:
   the `[build-system]` minimum) sets `PYO3_BUILD_EXTENSION_MODULE` instead,
   so the extension still doesn't link libpython, while `cargo test` can.
 - **[`justfile`](justfile):** the recipes above.
-- **[`activate.sh`](activate.sh):** see the next section.
+- **[`activate.sh`](activate.sh):** see
+  [Activating the venv and `just` completion](#activating-the-venv-and-just-completion).
 - **[`.gitignore`](.gitignore):** Rust build output (`/target`), the
   compiled extension in `src/`, `profile.svg` and tool caches. uv's
   template only covers Python.
 
 - **[`.github/workflows/ci.yml`](.github/workflows/ci.yml):** runs
-  `uv run just check` on every push to `main` and on pull requests.
+  `uv run just check` and `uv run just build` on every push to `main` and
+  on pull requests, on Ubuntu 24.04 and 26.04 with Python 3.13, 3.14 and
+  3.15 (setup-uv's `python-version` overrides `.python-version`) and stable
+  Rust. One extra job uses Rust 1.87, the `rust-version` in `Cargo.toml`.
+  The toolchain comes from the runner's preinstalled `rustup`. The actions
+  are pinned by commit hash, with the version in a comment.
+- **[`.github/dependabot.yml`](.github/dependabot.yml):** Dependabot checks
+  the actions weekly and opens one PR with any updates (new hash and
+  version comment), which CI then tests.
 
 Keep `Cargo.lock` and `uv.lock` committed.
+
+### Finding GitHub Actions and their versions
+
+Each `uses: <owner>/<repo>@<ref>` line in a workflow names a GitHub
+repository, `https://github.com/<owner>/<repo>`, and the version of it to
+run. For example, `actions/checkout` is
+[github.com/actions/checkout](https://github.com/actions/checkout). That
+repository holds the action's documentation:
+
+- **README:** usage examples and the inputs it accepts (the `with:` keys).
+  `action.yml` in the repository root defines those inputs and their
+  defaults.
+- **Releases page** (`https://github.com/<owner>/<repo>/releases`): every
+  version, with release notes that list breaking changes. Read them before
+  moving to a new major version.
+- **[GitHub Marketplace](https://github.com/marketplace?type=actions):**
+  search for actions; each listing links to its repository.
+
+`<ref>` can be a major-version tag (`@v7`, moved by the maintainer to each
+new v7.x release; not every action publishes these), an exact tag
+(`@v7.0.1`), or a commit hash. This repo pins hashes, which never change,
+and puts the version in a comment. GitHub's
+[security guide](https://docs.github.com/en/actions/reference/security/secure-use#using-third-party-actions)
+recommends that. From the terminal:
+
+```bash
+gh release list -R actions/checkout --limit 5             # newest versions
+gh release view v7.0.1 -R actions/checkout                # release notes
+gh api repos/actions/checkout/git/ref/tags/v7.0.1 -q .object.sha   # hash to pin
+```
+
+If the last command's `.object.type` is `tag` rather than `commit`, the tag
+is annotated: look up that object with
+`gh api repos/<owner>/<repo>/git/tags/<sha> -q .object.sha` to get the
+commit. Dependabot (see above) does all of this weekly and opens a PR.
+
+The workflow syntax itself (`on:`, `jobs:`, `runs-on:`, `steps:`) is
+documented in GitHub's
+[workflow syntax reference](https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax),
+and the runner images (what `ubuntu-24.04` contains, such as its Rust
+version) in [actions/runner-images](https://github.com/actions/runner-images).
 
 ---
 
@@ -356,7 +409,8 @@ just <TAB><TAB>            # lists the recipes
   `eval "$(JUST_COMPLETE=bash just)"`. The order matters: that line runs
   `just`, which must already be on `PATH`. This is also why the line can't
   go in `~/.bashrc`: no venv is active at shell startup.
-- It recreates a missing venv (e.g. after `just clean`) with `uv sync`.
+- It recreates a missing venv (e.g. after `just clean`) with `uv sync`, and
+  stops with an error if that fails.
 - It must be **sourced**, not executed; `./activate.sh` prints a hint and
   exits.
 - It works from any directory, and across projects: each project's
@@ -387,6 +441,8 @@ To activate automatically in every terminal, add to `~/.bashrc`:
    | `x: int = "a"` | `just typecheck` |
    | Function missing from `_core.pyi` | `just typecheck` |
    | `let unused = 5;` in Rust | `just lint` (clippy) |
+   | Badly indented Rust | `just lint` (`cargo fmt --check`) |
+   | A failing `assert!` in a Rust `#[test]` | `just test` (`cargo test`) |
    | `assert False` in a test | `just test` |
 
 3. **Clean rebuild:**
@@ -439,5 +495,6 @@ To activate automatically in every terminal, add to `~/.bashrc`:
 | `just <TAB>` does nothing, or only completes file names | Completion not registered in this shell (`just` prints a hint) | `source ./activate.sh`; verify with `complete -p just` |
 | `ModuleNotFoundError: python_rust` | Not using the venv's Python | `uv run python ...` or `source ./activate.sh` |
 | Rust change not visible | Ran `python` in the activated venv, which doesn't rebuild | `uv run python ...` or `uv sync` |
+| `cargo test`: `error while loading shared libraries: libpython3.13.so.1.0` | The test binary links libpython (seen with Rust 1.87; newer toolchains drop it while no test calls Python), and uv's Python keeps it in its own `lib/` | Use `just test`, which sets `LD_LIBRARY_PATH` to Python's `LIBDIR` |
 | `ImportError: cannot import name '_core'` | `src/python_rust/_core.abi3.so` deleted, and uv reinstalled its cached build | `uv sync --reinstall-package python-rust` |
 | Prompt shows the venv but commands fail | `.venv` deleted (e.g. `just clean`) while active | `deactivate`, then `source ./activate.sh` |

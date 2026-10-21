@@ -7,15 +7,32 @@ on:
 
 jobs:
   check:
-    runs-on: ubuntu-latest
+    name: ${{ matrix.os }}, Python ${{ matrix.python }}, Rust ${{ matrix.rust }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, ubuntu-26.04]
+        python: ["3.13", "3.14", "3.15"]
+        rust: [stable]
+        include:
+          # The minimum Rust version, rust-version in Cargo.toml
+          - { os: ubuntu-24.04, python: "3.13", rust: "1.87" }
+    runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v5
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      # rustup is preinstalled on the GitHub runners
+      - run: |
+          rustup toolchain install ${{ matrix.rust }} --profile minimal -c clippy,rustfmt
+          rustup default ${{ matrix.rust }}
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
-          components: clippy, rustfmt
-      - uses: Swatinem/rust-cache@v2
-      - uses: astral-sh/setup-uv@v6
+          # pyo3's build depends on the Python version
+          key: python-${{ matrix.python }}
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
         with:
           enable-cache: true
+          # Sets UV_PYTHON, which overrides .python-version
+          python-version: ${{ matrix.python }}
       # Installs Python, the dev tools (including just) and builds the extension
       - run: uv run just check
+      - run: uv run just build

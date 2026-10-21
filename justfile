@@ -26,9 +26,11 @@ lint:
 typecheck:
     uv run mypy
 
-# Run Rust and Python tests
+# Run Rust and Python tests. cargo test binaries may link libpython, which
+# uv's Python keeps in its own lib/ directory, outside the loader's search path
 test:
-    CARGO_TARGET_DIR={{cargo_target}} cargo test
+    LD_LIBRARY_PATH="$(python -c 'import sysconfig; print(sysconfig.get_config_var("LIBDIR"))')${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" \
+        CARGO_TARGET_DIR={{cargo_target}} cargo test
     uv run pytest
 
 # Remove build output, caches and the venv (keeps the compiled extension in src/)

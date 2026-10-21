@@ -1,0 +1,10 @@
+# Weekly PRs that update the actions in .github/workflows (CI runs on each PR)
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    groups:
+      actions:
+        patterns: ["*"]
