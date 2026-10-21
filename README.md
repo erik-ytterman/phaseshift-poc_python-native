@@ -306,7 +306,7 @@ It only works with the venv's Python: a system `python3` gives
 
 `just build` (`maturin build --release --out dist`) builds a regular wheel
 into `dist/`, e.g.
-`python_rust-0.1.0-cp313-abi3-manylinux_2_34_x86_64.whl`. maturin tags it
+`python_rust-0.2.0-cp313-abi3-manylinux_2_34_x86_64.whl`. maturin tags it
 manylinux itself. Unlike the editable wheel, it contains the package itself (`__init__.py`,
 `_core.abi3.so`, `_core.pyi`, `py.typed`), with no link back to your source.
 It doesn't touch `.venv`.
