@@ -343,7 +343,10 @@ What this project adds to uv's maturin template:
   3.15 (setup-uv's `python-version` overrides `.python-version`) and stable
   Rust. One extra job uses Rust 1.87, the `rust-version` in `Cargo.toml`.
   The toolchain comes from the runner's preinstalled `rustup`. The actions
-  are pinned by commit hash, with the version in a comment.
+  are pinned by commit hash, with the version in a comment. The Rust 1.87
+  job and the stable job on Ubuntu 24.04 with Python 3.13 share a uv cache
+  key, so one of them may warn that it couldn't save the cache (see
+  [Troubleshooting](#troubleshooting)).
 - **[`.github/dependabot.yml`](.github/dependabot.yml):** Dependabot checks
   the actions weekly and opens one PR with any updates (new hash and
   version comment), which CI then tests.
@@ -497,4 +500,5 @@ To activate automatically in every terminal, add to `~/.bashrc`:
 | Rust change not visible | Ran `python` in the activated venv, which doesn't rebuild | `uv run python ...` or `uv sync` |
 | `cargo test`: `error while loading shared libraries: libpython3.13.so.1.0` | The test binary links libpython (seen with Rust 1.87; newer toolchains drop it while no test calls Python), and uv's Python keeps it in its own `lib/` | Use `just test`, which sets `LD_LIBRARY_PATH` to Python's `LIBDIR` |
 | `ImportError: cannot import name '_core'` | `src/python_rust/_core.abi3.so` deleted, and uv reinstalled its cached build | `uv sync --reinstall-package python-rust` |
+| CI warning `Failed to save: Unable to reserve cache with key setup-uv-…`, another job may be creating this cache | setup-uv's cache key is built from the OS, Python version and lock files, not the Rust version, so the Rust 1.87 job and the stable job on Ubuntu 24.04 with Python 3.13 compute the same key; only one can save it. Both would save the same Python packages (Rust output goes to `rust-cache`, whose key includes the Rust version) | Harmless, ignored for now. To remove it, add `cache-suffix: rust-${{ matrix.rust }}` to the setup-uv step in `ci.yml` |
 | Prompt shows the venv but commands fail | `.venv` deleted (e.g. `just clean`) while active | `deactivate`, then `source ./activate.sh` |
