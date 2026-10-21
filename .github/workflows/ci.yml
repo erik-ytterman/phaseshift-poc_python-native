@@ -26,8 +26,10 @@ jobs:
           rustup default ${{ matrix.rust }}
       - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
-          # pyo3's build depends on the Python version
-          key: python-${{ matrix.python }}
+          # rust-cache's own key covers the Rust version and lock files, but not the
+          # Ubuntu version or Python: pyo3's build records where libpython is, which
+          # differs between them, so a build from another OS can fail to link
+          key: ${{ matrix.os }}-python-${{ matrix.python }}
       - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
         with:
           enable-cache: true
