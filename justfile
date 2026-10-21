@@ -20,7 +20,7 @@ lint:
     uv run ruff check .
     uv run ruff format --check .
     cargo fmt --check
-    CARGO_TARGET_DIR={{cargo_target}} cargo clippy --all-targets -- -D warnings
+    CARGO_TARGET_DIR={{cargo_target}} uv run cargo clippy --all-targets -- -D warnings
 
 # Type-check Python (mypy strict)
 typecheck:
@@ -29,8 +29,8 @@ typecheck:
 # Run Rust and Python tests. cargo test binaries may link libpython, which
 # uv's Python keeps in its own lib/ directory, outside the loader's search path
 test:
-    LD_LIBRARY_PATH="$(python -c 'import sysconfig; print(sysconfig.get_config_var("LIBDIR"))')${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" \
-        CARGO_TARGET_DIR={{cargo_target}} cargo test
+    LD_LIBRARY_PATH="$(uv run python -c 'import sysconfig; print(sysconfig.get_config_var("LIBDIR"))')${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" \
+        CARGO_TARGET_DIR={{cargo_target}} uv run cargo test
     uv run pytest
 
 # Remove build output, caches and the venv (keeps the compiled extension in src/)
@@ -51,4 +51,3 @@ profile script *args:
 # Build a release wheel (manylinux-tagged) into dist/
 build:
     uv run maturin build --release --out dist
-

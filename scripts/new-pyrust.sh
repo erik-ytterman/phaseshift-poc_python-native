@@ -50,7 +50,10 @@ cd "$dir"
 uv add --dev ruff mypy py-spy pytest maturin rust-just
 
 # --- Cargo.toml: stable ABI matching requires-python, no extension-module ----
+# This repo's minimum Rust version, which the copied CI tests
+rust_version="$(sed -n 's/^rust-version = "\(.*\)"$/\1/p' "$template_dir/Cargo.toml")"
 sed -i -E \
+    -e "/^edition = /a rust-version = \"$rust_version\"" \
     -e '/^# "extension-module" tells/c\
 # No "extension-module" feature: maturin sets PYO3_BUILD_EXTENSION_MODULE instead, so the\
 # extension doesn'"'"'t link libpython but `cargo test` binaries can (needed to call Python from Rust tests)' \
@@ -68,7 +71,8 @@ sed -i 's|^\[tool\.uv\]$|[tool.uv]\
 no-build-isolation-package = ["'"$name"'"]|' pyproject.toml
 
 # Fail loudly if the uv template changed and an edit above matched nothing
-for check in "Cargo.toml:abi3-$py_tag" 'pyproject.toml:"maturin>=1.15,<2.0"' \
+for check in "Cargo.toml:abi3-$py_tag" "Cargo.toml:rust-version = \"$rust_version\"" \
+    'pyproject.toml:"maturin>=1.15,<2.0"' \
     'pyproject.toml:no-build-isolation-package'; do
     grep -qF "${check#*:}" "${check%%:*}" ||
         { echo "${check%%:*} edit failed (${check#*:}); has uv's template changed?" >&2; exit 1; }

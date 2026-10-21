@@ -180,12 +180,8 @@ mod tests {
 ```
 
 Test the Python-facing behaviour with pytest (step 4). A Rust test can
-call into Python too, but needs `Python::initialize()` first and, on
-Linux, uv's libpython on the library path:
-
-```bash
-LD_LIBRARY_PATH="$(uv run python -c 'import sysconfig; print(sysconfig.get_config_var("LIBDIR"))')" just test
-```
+call into Python too, but needs `Python::initialize()` first; `just test`
+already puts uv's libpython on the library path for it.
 
 **2. Type stub — [`src/python_rust/_core.pyi`](src/python_rust/_core.pyi).**
 Type checkers can't inspect the compiled `.so`, so declare the signature by
@@ -311,8 +307,7 @@ It only works with the venv's Python: a system `python3` gives
 `just build` (`maturin build --release --out dist`) builds a regular wheel
 into `dist/`, e.g.
 `python_rust-0.1.0-cp313-abi3-manylinux_2_34_x86_64.whl`. maturin tags it
-manylinux itself. Unlike the
-editable wheel, it contains the package itself (`__init__.py`,
+manylinux itself. Unlike the editable wheel, it contains the package itself (`__init__.py`,
 `_core.abi3.so`, `_core.pyi`, `py.typed`), with no link back to your source.
 It doesn't touch `.venv`.
 
@@ -368,22 +363,30 @@ What this project adds to uv's maturin template:
 - **[`.gitignore`](.gitignore):** Rust build output (`/target`), the
   compiled extension in `src/`, `profile.svg` and tool caches. uv's
   template only covers Python.
-
 - **[`.github/workflows/ci.yml`](.github/workflows/ci.yml):** runs
   `uv run just check` and `uv run just build` on every push to `main` and
   on pull requests, on Ubuntu 24.04 and 26.04 with Python 3.13, 3.14 and
   3.15 (setup-uv's `python-version` overrides `.python-version`) and stable
   Rust. One extra job uses Rust 1.87, the `rust-version` in `Cargo.toml`.
   The toolchain comes from the runner's preinstalled `rustup`. The actions
-  are pinned by commit hash, with the version in a comment. The Rust 1.87
-  job and the stable job on Ubuntu 24.04 with Python 3.13 share a uv cache
-  key, so one of them may warn that it couldn't save the cache (see
-  [Troubleshooting](#troubleshooting)).
+  are pinned by commit hash, with the version in a comment. setup-uv's
+  `cache-suffix` adds the Rust version to its cache key, which otherwise
+  covers only the OS, Python and lock files: without it, the Rust 1.87 job
+  and the stable job on Ubuntu 24.04 with Python 3.13 would race to save the
+  same cache, and one would warn.
 - **[`.github/dependabot.yml`](.github/dependabot.yml):** Dependabot checks
   the actions weekly and opens one PR with any updates (new hash and
   version comment), which CI then tests.
 
 Keep `Cargo.lock` and `uv.lock` committed.
+
+---
+
+## Working with GitHub
+
+CI runs on GitHub Actions, with the files described under
+[Configuration](#configuration). This section explains how to find the
+actions it uses, and how to work with GitHub from the terminal.
 
 ### Finding GitHub Actions and their versions
 
@@ -418,7 +421,8 @@ gh api repos/actions/checkout/git/ref/tags/v7.0.1 -q .object.sha   # hash to pin
 If the last command's `.object.type` is `tag` rather than `commit`, the tag
 is annotated: look up that object with
 `gh api repos/<owner>/<repo>/git/tags/<sha> -q .object.sha` to get the
-commit. Dependabot (see above) does all of this weekly and opens a PR.
+commit. Dependabot (see [Configuration](#configuration)) does all of this weekly
+and opens a PR.
 
 The workflow syntax itself (`on:`, `jobs:`, `runs-on:`, `steps:`) is
 documented in GitHub's
@@ -623,5 +627,4 @@ To activate automatically in every terminal, add to `~/.bashrc`:
 | Rust change not visible | Ran `python` in the activated venv, which doesn't rebuild | `uv run python ...` or `uv sync` |
 | `cargo test`: `error while loading shared libraries: libpython3.13.so.1.0` | The test binary links libpython (seen with Rust 1.87; newer toolchains drop it while no test calls Python), and uv's Python keeps it in its own `lib/` | Use `just test`, which sets `LD_LIBRARY_PATH` to Python's `LIBDIR` |
 | `ImportError: cannot import name '_core'` | `src/python_rust/_core.abi3.so` deleted, and uv reinstalled its cached build | `uv sync --reinstall-package python-rust` |
-| CI warning `Failed to save: Unable to reserve cache with key setup-uv-…`, another job may be creating this cache | setup-uv's cache key is built from the OS, Python version and lock files, not the Rust version, so the Rust 1.87 job and the stable job on Ubuntu 24.04 with Python 3.13 compute the same key; only one can save it. Both would save the same Python packages (Rust output goes to `rust-cache`, whose key includes the Rust version) | Harmless, ignored for now. To remove it, add `cache-suffix: rust-${{ matrix.rust }}` to the setup-uv step in `ci.yml` |
 | Prompt shows the venv but commands fail | `.venv` deleted (e.g. `just clean`) while active | `deactivate`, then `source ./activate.sh` |

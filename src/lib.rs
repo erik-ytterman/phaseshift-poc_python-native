@@ -1,5 +1,6 @@
 use pyo3::prelude::*;
 
+/// Return the prime factors of `n` in ascending order. 0 and 1 have none.
 fn factor_impl(mut n: u64) -> Vec<u64> {
     let mut factors = Vec::new();
     while n >= 2 && n.is_multiple_of(2) {
@@ -21,9 +22,9 @@ fn factor_impl(mut n: u64) -> Vec<u64> {
     factors
 }
 
-/// A Python module implemented in Rust. The name of this module must match
-/// the `lib.name` setting in the `Cargo.toml`, else Python will not be able to
-/// import the module.
+// A Python module implemented in Rust. The name `_core` must match `[lib] name`
+// in Cargo.toml and `module-name` in pyproject.toml's [tool.maturin], else
+// Python will not be able to import it.
 #[pymodule]
 mod _core {
     use pyo3::prelude::*;
@@ -38,9 +39,9 @@ mod _core {
     ///
     /// `n` must be in the range 0 <= n < 2**64; otherwise OverflowError is raised.
     /// 0 and 1 have no prime factors and return an empty list.
-    /// The GIL is released while factorizing, so other Python threads keep running.
     #[pyfunction]
     fn factor(py: Python<'_>, n: u64) -> Vec<u64> {
+        // The GIL is released while factorizing, so other Python threads keep running
         py.detach(|| super::factor_impl(n))
     }
 }
