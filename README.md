@@ -426,6 +426,97 @@ documented in GitHub's
 and the runner images (what `ubuntu-24.04` contains, such as its Rust
 version) in [actions/runner-images](https://github.com/actions/runner-images).
 
+### Using `gh`, the GitHub CLI
+
+[`gh`](https://cli.github.com) runs GitHub operations from the terminal:
+repositories, CI runs, pull requests and the API. Building and testing this
+project doesn't need it, only working with GitHub does. Install it from
+[cli.github.com](https://cli.github.com) or your package manager (on Ubuntu:
+`sudo apt install gh`).
+
+**Logging in.** `gh auth login` opens a browser, or prints a one-time code
+to enter at <https://github.com/login/device>, and stores a token in the
+system keyring:
+
+```bash
+gh auth login                                  # choose GitHub.com, then SSH or HTTPS
+gh auth status                                 # account, git protocol and token scopes
+gh auth refresh -h github.com -s delete_repo   # add a scope (here: deleting repos)
+```
+
+The token's scopes limit what `gh` can do. The default ones (`repo`,
+`read:org`, `gist`) cover everything below except deleting a repository,
+which needs `delete_repo`. When a command fails with HTTP 403, `gh` names
+the missing scope.
+
+**Repositories.** Inside a clone, `gh` acts on the repository of its
+`origin` remote; anywhere else, name it with `-R <owner>/<repo>`.
+
+```bash
+gh repo view --web                             # open this repo in the browser
+gh repo create my-pkg --private --source=. --remote=origin --push   # publish a local repo
+gh repo delete <owner>/my-pkg --yes            # delete it (needs delete_repo; can't be undone)
+```
+
+With `--source=.`, `gh repo create` makes a GitHub repository from the
+current git repository and pushes it. That works for a project made by
+`scripts/new-pyrust.sh`, and its CI starts with the first push.
+
+**CI runs.**
+
+```bash
+gh run list -L 5                               # latest runs: status, result, title, ID
+gh run list -w CI -c "$(git rev-parse HEAD)"   # CI runs for the current commit
+gh run watch <run-id> --exit-status            # follow a run; exits with 1 if it fails
+gh run view <run-id>                           # summary, one line per job
+gh run view <run-id> --log-failed              # logs of the failed steps only
+gh run rerun <run-id> --failed                 # rerun only the failed jobs
+```
+
+`-c` needs the full commit hash, which `git rev-parse HEAD` prints; a short
+one matches nothing. `gh run list` shows every workflow, including
+Dependabot's (`Dependabot Updates`), so `-w CI` selects ours by its `name:`
+in `ci.yml`. A run appears a few seconds after the push, so a list made
+right away can be empty.
+
+**Pull requests.** Dependabot's updates arrive as pull requests:
+
+```bash
+gh pr list                                     # open PRs
+gh pr checks <number>                          # CI results for a PR
+gh pr merge <number> --squash --delete-branch  # merge it once CI passes
+```
+
+**Scripting.** Most commands take `--json <fields>` and `-q <jq filter>`.
+Use them in scripts: the plain output is meant for people and can change
+between versions. `gh api` makes any REST API call.
+
+```bash
+gh run view <run-id> --json jobs -q '.jobs[] | .name + ": " + .conclusion'
+gh api repos/<owner>/<repo>/actions/runs -q .total_count
+```
+
+`gh <command> --help` lists every option; the
+[manual](https://cli.github.com/manual) has the same in full.
+
+**Example: testing a new project's CI.** CI only runs on GitHub, so testing
+the CI files that `scripts/new-pyrust.sh` copies needs a repository there.
+This publishes a scaffolded project privately, waits for its CI and deletes
+it again:
+
+```bash
+scripts/new-pyrust.sh --python 3.14 throwaway-ci
+cd throwaway-ci
+git add -A && git commit -m "Scaffold for a CI test"
+git branch -M main          # CI runs on pushes to main; git's default may be master
+gh repo create throwaway-ci --private --source=. --remote=origin --push
+sleep 10                    # let the run appear
+id=$(gh run list -w CI -c "$(git rev-parse HEAD)" --json databaseId -q '.[0].databaseId')
+gh run watch "$id" --exit-status && gh run view "$id"
+gh repo delete "$(gh api user -q .login)/throwaway-ci" --yes
+cd .. && rm -rf throwaway-ci
+```
+
 ---
 
 ## Activating the venv and `just` completion
